@@ -1,8 +1,9 @@
-import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
+import gymnasium as gym
+from gymnasium import spaces
+from gymnasium.utils import seeding
 import numpy as np
 import copy
+
 
 class PuddleEnv(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
@@ -73,7 +74,7 @@ class PuddleEnv(gym.Env):
         screen_height = 400
 
         if self.viewer is None:
-            from gym.envs.classic_control import rendering
+            from gymnasium.envs.classic_control import rendering
             from gym_puddle.shapes.image import Image
             self.viewer = rendering.Viewer(screen_width, screen_height)
 
