@@ -1,8 +1,7 @@
 import gymnasium as gym
 from gymnasium import spaces
-from gymnasium.utils import seeding
 import numpy as np
-import copy
+from typing import Any
 
 
 class PuddleEnv(gym.Env):
@@ -26,13 +25,9 @@ class PuddleEnv(gym.Env):
         for i in range(4):
             self.actions[i][i//2] = thrust * (i%2 * 2 - 1)
 
-        self._seed()
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
-
-    def _seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
+        self.pos = None
 
     def _step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
@@ -57,9 +52,15 @@ class PuddleEnv(gym.Env):
     def _gaussian1d(self, p, mu, sig):
         return np.exp(-((p - mu)**2)/(2.*sig**2)) / (sig*np.sqrt(2.*np.pi))
 
-    def _reset(self):
+    def reset(self,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None):
+        super().reset(seed=seed)
+
         if self.start is None:
             self.pos = self.observation_space.sample()
         else:
-            self.pos = copy.copy(self.start)
-        return self.pos
+            self.pos = np.copy(self.start)
+
+        return self.pos, {}
