@@ -1,7 +1,7 @@
+from typing import Any
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
-from typing import Any
 
 
 class PuddleEnv(gym.Env):
@@ -29,17 +29,17 @@ class PuddleEnv(gym.Env):
         self.render_mode = render_mode
         self.pos = None
 
-    def _step(self, action):
-        assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
+    def step(self, action: np.int64) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
+        assert self.action_space.contains(action), f"{action}, {type(action)} invalid"
 
         self.pos += self.actions[action] + self.np_random.uniform(low=-self.noise, high=self.noise, size=(2,))
         self.pos = np.clip(self.pos, 0.0, 1.0)
 
         reward = self._get_reward(self.pos)
 
-        done = np.linalg.norm((self.pos - self.goal), ord=1) < self.goal_threshold
+        terminated = np.linalg.norm((self.pos - self.goal), ord=1) < self.goal_threshold
 
-        return self.pos, reward, done, {}
+        return self.pos, reward, terminated, False, {}
 
     def _get_reward(self, pos):
         reward = -1.
