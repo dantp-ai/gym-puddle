@@ -26,7 +26,7 @@ class PuddleEnv(gym.Env):
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
-        self.pos = None
+        self.pos = self._get_initial_obs()
 
     def step(self, action: np.int64) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         assert self.action_space.contains(action), f"{action}, {type(action)} invalid"
@@ -48,6 +48,14 @@ class PuddleEnv(gym.Env):
 
         return reward
 
+    def _get_initial_obs(self) -> np.ndarray:
+        if self.start is None:
+            pos = self.observation_space.sample()
+        else:
+            pos = self.start.copy()
+
+        return pos
+
     def _gaussian1d(self, p, mu, sig):
         return np.exp(-((p - mu)**2)/(2.*sig**2)) / (sig*np.sqrt(2.*np.pi))
 
@@ -57,9 +65,6 @@ class PuddleEnv(gym.Env):
         options: dict[str, Any] | None = None):
         super().reset(seed=seed)
 
-        if self.start is None:
-            self.pos = self.observation_space.sample()
-        else:
-            self.pos = np.copy(self.start)
+        self.pos = self._get_initial_obs()
 
         return self.pos, {}
