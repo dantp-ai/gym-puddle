@@ -1,4 +1,5 @@
 from typing import Any
+from dataclasses import dataclass
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -6,17 +7,35 @@ from pygame.time import Clock as pygClock
 from pygame import Surface as pygSurface
 
 
+@dataclass
+class Puddle:
+    center: np.ndarray
+    width: np.ndarray
+
+
 class PuddleEnv(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 50,}
 
-    def __init__(self, start: np.ndarray | None = None, goal: np.ndarray | None = None, goal_threshold: float = 0.1, noise: float = 0.025, thrust: float = 0.05, puddle_center: list[np.ndarray] | None = None, puddle_width: list[np.ndarray] | None = None, render_mode: str | None = None):
+    def __init__(self,
+                 start: np.ndarray | None = None,
+                 goal: np.ndarray | None = None,
+                 goal_threshold: float = 0.1,
+                 noise: float = 0.025,
+                 thrust: float = 0.05,
+                 puddles: list[Puddle] | None = None,
+                 render_mode: str | None = None
+                 ):
         self.start = start if start is not None else np.array([0.2, 0.4])
         self.goal = goal if goal is not None else np.array([1., 1.])
         self.goal_threshold = goal_threshold
         self.noise = noise
         self.thrust = thrust
-        self.puddle_center = puddle_center if puddle_center is not None else [np.array(center) for center in [[.3, .6], [.4, .5], [.8, .9]]]
-        self.puddle_width = puddle_width if puddle_width is not None else [np.array(width) for width in [[.1, .03], [.03, .1], [.03, .1]]]
+        default_puddles = [
+            Puddle(center=np.array([.3, .6]), width=np.array([.1, .03])),
+            Puddle(center=np.array([.4, .5]), width=np.array([.03, .1])),
+            Puddle(center=np.array([.8, .9]), width=np.array([.03, .1]))
+        ]
+        self.puddles = puddles if puddles is not None else default_puddles
 
         self.action_space = spaces.Discrete(5)
         self.observation_space = spaces.Box(0.0, 1.0, shape=(2,))
@@ -51,9 +70,9 @@ class PuddleEnv(gym.Env):
 
     def _get_reward(self, pos):
         reward = -1.
-        for cen, wid in zip(self.puddle_center, self.puddle_width):
-            reward -= 2. * self._gaussian1d(pos[0], cen[0], wid[0]) * \
-                self._gaussian1d(pos[1], cen[1], wid[1])
+        for puddle in self.puddles:
+            reward -= 2. * self._gaussian1d(pos[0], puddle.center[0], puddle.width[0]) * \
+                self._gaussian1d(pos[1], puddle.center[1], puddle.width[1])
 
         return reward
 
@@ -77,7 +96,7 @@ class PuddleEnv(gym.Env):
 
         import pygame
         if self.viewer is None:
-            pygame.init()
+            pygame.init()  # pylint: disable=E1101
             if self.render_mode == "human":
                 pygame.display.init()
                 self.viewer = pygame.display.set_mode((self.screen_width, self.screen_height))
@@ -143,6 +162,6 @@ class PuddleEnv(gym.Env):
         if self.viewer is not None:
             import pygame
             pygame.display.quit()
-            pygame.quit()
+            pygame.quit()  # pylint: disable=E1101
             self.viewer = None
             self.clock = None
