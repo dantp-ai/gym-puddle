@@ -7,21 +7,20 @@ import numpy as np
 class PuddleEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"]}
 
-    def __init__(self, start=[0.2, 0.4], goal=[1.0, 1.0], goal_threshold=0.1,
-            noise=0.025, thrust=0.05, puddle_center=[[.3, .6], [.4, .5], [.8, .9]],
-            puddle_width=[[.1, .03], [.03, .1], [.03, .1]], render_mode = None):
-        self.start = np.array(start)
-        self.goal = np.array(goal)
+    def __init__(self, start: np.ndarray | None = None, goal: tuple[float, float] | None = None, goal_threshold: float = 0.1, noise: float = 0.025, thrust: float = 0.05, puddle_center: list[np.ndarray] | None = None, puddle_width: list[np.ndarray] | None = None, render_mode: str | None = None):
+        self.start = start if start is not None else np.array([0.2, 0.4])
+        self.goal = goal if goal is not None else np.array([1.0, 1.0])
         self.goal_threshold = goal_threshold
         self.noise = noise
         self.thrust = thrust
-        self.puddle_center = [np.array(center) for center in puddle_center]
-        self.puddle_width = [np.array(width) for width in puddle_width]
+        self.puddle_center = puddle_center if puddle_center is not None else [np.array(center) for center in [[.3, .6], [.4, .5], [.8, .9]]]
+        self.puddle_width = puddle_width if puddle_width is not None else [np.array(width) for width in [[.1, .03], [.03, .1], [.03, .1]]]
 
         self.action_space = spaces.Discrete(5)
         self.observation_space = spaces.Box(0.0, 1.0, shape=(2,))
 
-        self.actions = [np.zeros(2) for i in range(5)]
+        self.actions = [np.zeros(2) for _ in range(5)]
+        # [(-0.05, 0), (0.05, 0), (0, -0.05), (0, 0.05), (0, 0)]
         for i in range(4):
             self.actions[i][i//2] = thrust * (i%2 * 2 - 1)
 
