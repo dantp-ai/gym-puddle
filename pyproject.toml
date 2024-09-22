@@ -1,6 +1,6 @@
 [project]
 name = "gym-puddle"
-version = "0.0.2"
+version = "0.0.3"
 description = "Puddle-world environment in Gymnasium for RL"
 readme = "README.md"
 requires-python = ">=3.11"
