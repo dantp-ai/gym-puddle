@@ -1,10 +1,11 @@
-from typing import Any
 from dataclasses import dataclass
+from typing import Any
+
 import gymnasium as gym
-from gymnasium import spaces
 import numpy as np
-from pygame.time import Clock as pygClock
+from gymnasium import spaces
 from pygame import Surface as pygSurface
+from pygame.time import Clock as pygClock
 
 
 @dataclass
