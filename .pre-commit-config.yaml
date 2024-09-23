@@ -13,7 +13,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: uv run mypy tests gym_puddle
+        entry: uv run mypy tests gym_puddle examples
         pass_filenames: false
         language: system
         types: [python]
