@@ -55,6 +55,7 @@ class PuddleEnv(gym.Env):
         self.viewer: pygSurface | None = None
         self.screen_width = 600
         self.screen_height = 400
+        self.env_img_pixels = self._draw_image()
         self.clock: pygClock | None = None
         self.pos = self._get_initial_obs()
 
@@ -101,6 +102,22 @@ class PuddleEnv(gym.Env):
     def _gaussian1d(self, p: float, mu: float, sig: float) -> float:
         return np.exp(-((p - mu) ** 2) / (2.0 * sig**2)) / (sig * np.sqrt(2.0 * np.pi))
 
+    def _draw_image(
+        self, img_width: int = 100, img_height: int = 100, n_channels: int = 3
+    ) -> np.ndarray:
+        pixels = np.zeros((img_width, img_height, n_channels))
+        for i in range(img_width):
+            for j in range(img_height):
+                x = float(i) / img_width
+                y = float(j) / img_height
+                reward = self._get_reward(np.array([x, y]))
+                pixels[j, i, :] = reward
+        pixels -= pixels.min()
+        pixels *= 255.0 / pixels.max()
+        pixels = np.floor(pixels)
+
+        return pixels
+
     def render(self) -> None:
         if self.render_mode is None:
             gym.logger.warn(
@@ -125,20 +142,7 @@ class PuddleEnv(gym.Env):
         canvas = pygame.Surface((self.screen_width, self.screen_height))
         canvas.fill((255, 255, 255))
 
-        img_width, img_height = 100, 100
-        pixels = np.zeros((img_width, img_height, 3))
-        for i in range(img_width):
-            for j in range(img_height):
-                x = float(i) / img_width
-                y = float(j) / img_height
-                reward = self._get_reward(np.array([x, y]))
-                pixels[j, i, :] = reward
-
-        pixels -= pixels.min()
-        pixels *= 255.0 / pixels.max()
-        pixels = np.floor(pixels)
-
-        puddle_surface = pygame.surfarray.make_surface(pixels)
+        puddle_surface = pygame.surfarray.make_surface(self.env_img_pixels)
         puddle_surface = pygame.transform.scale(
             puddle_surface, (self.screen_width, self.screen_height)
         )
