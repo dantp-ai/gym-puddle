@@ -103,15 +103,19 @@ class PuddleEnv(gym.Env):
         return np.exp(-((p - mu) ** 2) / (2.0 * sig**2)) / (sig * np.sqrt(2.0 * np.pi))
 
     def _draw_image(
-        self, img_width: int = 100, img_height: int = 100, n_channels: int = 3
+        self,
+        img_width: int = 100,
+        img_height: int = 100,
+        n_channels: int = 3,
     ) -> np.ndarray:
-        pixels = np.zeros((img_width, img_height, n_channels))
-        for i in range(img_width):
-            for j in range(img_height):
-                x = float(i) / img_width
-                y = float(j) / img_height
-                reward = self._get_reward(np.array([x, y]))
-                pixels[j, i, :] = reward
+        x = np.linspace(0.0, 1.0, img_width, endpoint=False)
+        y = np.linspace(0.0, 1.0, img_height, endpoint=False)
+        xx, yy = np.meshgrid(x, y)
+        positions = np.stack([xx, yy], axis=2)
+        get_reward_vec = np.vectorize(self._get_reward, signature="(n)->()")
+        rewards = get_reward_vec(positions)
+        pixels = np.repeat(rewards[:, :, np.newaxis], n_channels, axis=2)
+
         pixels -= pixels.min()
         pixels *= 255.0 / pixels.max()
         pixels = np.floor(pixels)
