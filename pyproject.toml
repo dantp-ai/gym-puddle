@@ -13,12 +13,15 @@ dependencies = [
 requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
+[project.optional-dependencies]
+jit = [
+    "numba>=0.60.0",
+]
 testing = [
     "pytest>=8.3.2",
     "mypy>=1.11.1",
     "ruff>=0.5.7",
 ]
-
 dev = [
     "pre-commit>=3.8.0",
 ]
