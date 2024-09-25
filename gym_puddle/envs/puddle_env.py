@@ -16,7 +16,10 @@ class Puddle:
 
 class PuddleEnv(gym.Env):
     metadata: dict[str, Any] = {
-        "render_modes": ["human"],
+        "render_modes": [
+            "human",
+            "rgb_array",
+        ],
         "render_fps": 50.0,
     }
 
@@ -122,7 +125,7 @@ class PuddleEnv(gym.Env):
 
         return pixels
 
-    def render(self) -> None:
+    def render(self):  # type: ignore
         if self.render_mode is None:
             gym.logger.warn(
                 "You are rendering without specifying render mode. Specify `render_mode` at initialization. Check suitable values in `env.metadata['render_modes']`."
@@ -175,6 +178,10 @@ class PuddleEnv(gym.Env):
             framerate = float(self.metadata["render_fps"])  # type: ignore
             self.clock.tick(framerate)
             pygame.display.flip()
+        elif self.render_mode == "rgb_array":
+            return np.transpose(
+                np.array(pygame.surfarray.pixels3d(self.viewer)), axes=(1, 0, 2)
+            )
 
     def reset(
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
