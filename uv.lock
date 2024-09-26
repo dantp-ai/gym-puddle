@@ -66,26 +66,24 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "mypy" },
     { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "ruff" },
 ]
 jit = [
     { name = "numba" },
-]
-testing = [
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "ruff" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "gymnasium", specifier = ">=0.28.0,<0.29.0" },
-    { name = "mypy", marker = "extra == 'testing'", specifier = ">=1.11.1" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.1" },
     { name = "numba", marker = "extra == 'jit'", specifier = ">=0.60.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.8.0" },
     { name = "pygame", specifier = ">=2.1.3" },
-    { name = "pytest", marker = "extra == 'testing'", specifier = ">=8.3.2" },
-    { name = "ruff", marker = "extra == 'testing'", specifier = ">=0.5.7" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.2" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5.7" },
 ]
 
 [[package]]
