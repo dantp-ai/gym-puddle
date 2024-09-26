@@ -19,7 +19,7 @@ repos:
         types: [python]
       - id: ruff-check
         name: ruff check
-        entry: uv run ruff check --select I --fix
+        entry: uv run ruff check --fix
         language: system
         types: [python]
       - id: ruff-format
