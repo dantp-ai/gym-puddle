@@ -65,19 +65,22 @@ class PuddleEnv(gym.Env):
         self.pos = self._get_initial_obs()
 
     def step(
-        self, action: np.int64
+        self,
+        action: np.int64,
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         assert self.action_space.contains(action), f"{action}, {type(action)} invalid"
 
         self.pos += self.actions[action] + self.np_random.uniform(
-            low=-self.noise, high=self.noise, size=(2,)
+            low=-self.noise,
+            high=self.noise,
+            size=(2,),
         )
         self.pos = np.clip(self.pos, 0.0, 1.0)
 
         reward = self._get_reward(self.pos)
 
         terminated = bool(
-            np.linalg.norm((self.pos - self.goal), ord=1) < self.goal_threshold
+            np.linalg.norm((self.pos - self.goal), ord=1) < self.goal_threshold,
         )
 
         if self.render_mode == "human":
@@ -127,16 +130,17 @@ class PuddleEnv(gym.Env):
             return np.ones_like(pixels) * 255.0
 
         pixels *= 255.0 / pixels.max()
-        pixels = np.floor(pixels)
 
-        return pixels
+        return np.floor(pixels)
 
     def render(self):  # type: ignore
         if self.render_mode is None:
             gym.logger.warn(
-                "You are rendering without specifying render mode. Specify `render_mode` at initialization. Check suitable values in `env.metadata['render_modes']`."
+                "You are rendering without specifying render mode."
+                "Specify `render_mode` at initialization. "
+                "Check suitable values in `env.metadata['render_modes']`.",
             )
-            return
+            return None
 
         import pygame
 
@@ -145,7 +149,7 @@ class PuddleEnv(gym.Env):
             if self.render_mode == "human":
                 pygame.display.init()
                 self.viewer = pygame.display.set_mode(
-                    (self.screen_width, self.screen_height)
+                    (self.screen_width, self.screen_height),
                 )
             else:
                 self.viewer = pygame.Surface((self.screen_width, self.screen_height))
@@ -157,7 +161,8 @@ class PuddleEnv(gym.Env):
 
         puddle_surface = pygame.surfarray.make_surface(self.env_img_pixels)
         puddle_surface = pygame.transform.scale(
-            puddle_surface, (self.screen_width, self.screen_height)
+            puddle_surface,
+            (self.screen_width, self.screen_height),
         )
         canvas.blit(puddle_surface, (0, 0))
 
@@ -186,11 +191,16 @@ class PuddleEnv(gym.Env):
             pygame.display.flip()
         elif self.render_mode == "rgb_array":
             return np.transpose(
-                np.array(pygame.surfarray.pixels3d(self.viewer)), axes=(1, 0, 2)
+                np.array(pygame.surfarray.pixels3d(self.viewer)),
+                axes=(1, 0, 2),
             )
+        return None
 
     def reset(
-        self, *, seed: int | None = None, options: dict[str, Any] | None = None
+        self,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
     ) -> tuple[np.ndarray, dict[str, Any]]:
         super().reset(seed=seed)
 
