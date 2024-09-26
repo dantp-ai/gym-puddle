@@ -10,20 +10,19 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
 jit = [
     "numba>=0.60.0",
 ]
-testing = [
+dev = [
     "pytest>=8.3.2",
     "mypy>=1.11.1",
     "ruff>=0.5.7",
-]
-dev = [
     "pre-commit>=3.8.0",
+    "setuptools>=75.1.0",
 ]
 
 [tool.mypy]
