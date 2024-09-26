@@ -122,6 +122,10 @@ class PuddleEnv(gym.Env):
         pixels = np.repeat(rewards[:, :, np.newaxis], n_channels, axis=2)
 
         pixels -= pixels.min()
+
+        if pixels.max() == 0:  # should occur only when no puddles
+            return np.ones_like(pixels) * 255.0
+
         pixels *= 255.0 / pixels.max()
         pixels = np.floor(pixels)
 
