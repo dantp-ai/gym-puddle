@@ -33,6 +33,7 @@ def test_invalid_action() -> None:
 
     with pytest.raises(ValueError):
         env.step(action)
+        env.close()
 
 
 def test_initial_position_after_reset() -> None:
