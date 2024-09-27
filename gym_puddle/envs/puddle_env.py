@@ -55,7 +55,12 @@ class PuddleEnv(gym.Env):
         for i in range(4):
             self.actions[i][i // 2] = thrust * (i % 2 * 2 - 1)
 
-        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        if render_mode is not None and render_mode not in self.metadata["render_modes"]:
+            raise ValueError(
+                "`render_mode` is invalid. "
+                "Check `metadata['render_modes'] for valid values."
+            )
+
         self.render_mode = render_mode
         self.viewer: pygSurface | None = None
         self.screen_width = 600
