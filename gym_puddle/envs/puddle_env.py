@@ -68,7 +68,8 @@ class PuddleEnv(gym.Env):
         self,
         action: np.int64,
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
-        assert self.action_space.contains(action), f"{action}, {type(action)} invalid"
+        if not self.action_space.contains(action):
+            raise ValueError(f"{action}, {type(action)} invalid")
 
         self.pos += self.actions[action] + self.np_random.uniform(
             low=-self.noise,
