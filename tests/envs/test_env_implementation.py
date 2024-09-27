@@ -1,11 +1,14 @@
-import gymnasium
+import gymnasium as gym
+import numpy as np
+import pytest
 from gymnasium.wrappers.time_limit import TimeLimit
 
+import gym_puddle  # noqa: F401
 from gym_puddle.envs import PuddleEnv
 
 
 def test_constant_minus_one_reward_no_puddles() -> None:
-    puddle_world: gymnasium.Env = PuddleEnv(puddles=[])
+    puddle_world: gym.Env = PuddleEnv(puddles=[])
     puddle_world = TimeLimit(puddle_world, max_episode_steps=5000)
 
     puddle_world.reset()
@@ -20,3 +23,14 @@ def test_constant_minus_one_reward_no_puddles() -> None:
             break
 
     puddle_world.close()
+
+
+def test_invalid_action() -> None:
+    env = gym.make("PuddleWorld-v0")
+    env.reset()
+
+    action = np.array(5, dtype=np.int64)
+
+    with pytest.raises(ValueError):
+        env.step(action)
+
