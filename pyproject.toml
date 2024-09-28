@@ -33,4 +33,5 @@ disallow_untyped_defs = true
 target-version = "py311"
 line-length = 88
 lint.select = ["B", "C4", "C90", "COM", "D", "DTZ", "E", "F", "FLY", "G", "I", "ISC", "PIE", "PLC", "PLE", "PLW", "RET", "RUF", "RSE", "SIM", "TID", "UP", "W", "YTT"]
-lint.ignore = ["COM812", "ISC001", "D100", "D101", "D102", "D103", "D104", "D105", "D107", "D203", "D213", "D401", "D402", "RUF012",]
+lint.ignore = ["COM812", "ISC001", "D100", "D101", "D102", "D103", "D104", "D105", "D107", "D203", "D212", "D213", "D400", "D401", "D402", "D415", "E501", "RUF012",]
+
