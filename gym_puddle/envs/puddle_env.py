@@ -18,18 +18,18 @@ class PuddleEnv(gym.Env):
     """
     ## Description
 
-    The `PuddleEnv` environment corresponds to the continuous grid-world environment described by Degris Thomas, Martha White, and Richard S. Sutton.
-    in ["Off-policy actor-critic." arXiv preprint arXiv:1205.4839 (2012).](https://arxiv.org/abs/1205.4839).
+    The `PuddleEnv` environment corresponds to the continuous grid-world environment described by Degris Thomas, Martha White, and Richard S. Sutton
+    in ["Off-policy actor-critic" arXiv preprint arXiv:1205.4839 (2012).](https://arxiv.org/abs/1205.4839).
 
-    The agent is placed in a 2-D continuous grid-world in a start position,
+    The agent is placed in a two-dimensional continuous grid-world in a start position,
     and has to reliably reach the goal position by maximizing the discounted cumulative sum of rewards (while avoiding negatively rewarding puddles).
 
 
     ## Observation Space
 
-    The observation is a 2-D `ndarray` with shape `(2,)` with the floating-point values corresponding to coordinates in the 2-D grid in the range `[0, 1]`.
+    The observation is a `ndarray` with shape `(2,)` with the floating-point values corresponding to coordinates in the two-dimensional grid in the range `[0, 1]`.
 
-    **Note**: Actions (described below in the section Actions Space) can lead to observations outside the grid, in which case the coordinates are clipped to the range `[0, 1]`.
+    **Note**: Actions (described below in the section "Actions Space") can lead to next observations outside of the grid, in which case the coordinates are clipped to the range `[0, 1]`.
 
 
     ## Action Space
@@ -37,10 +37,10 @@ class PuddleEnv(gym.Env):
     The action is a `ndarray` with shape `(5, )` which can take integer values in `{0, 4}`.
 
     The first four integers correspond to moving in the four cardinal directions (west, east, south, north).
-    The last integer value corresponds to standing still.
-    The amount of moving in one of the four directions is configurable by `thrust`
-    (which is one of the input arguments to the environment, described below in the section Arguments).
-    Hence, to summarize and using the default value for thrust: 0.05:
+    The last integer value corresponds to no move (standing still).
+    The amount of moving in one of the four directions is given by the configuration parameter `thrust`
+    (which is one of the input arguments to the environment, described below in the section "Arguments").
+    Hence, to summarize (using thrust = 0.05):
 
     - 0: (-0.05, 0), move west
     - 1: (0.05, 0),  move east
@@ -49,35 +49,37 @@ class PuddleEnv(gym.Env):
     - 4: (0, 0),     no move
 
     **Note**: The next observation is determined by the current agent position plus the direction from one of the five actions **plus**
-    a noise drawn from an uniform distribution with `low` (default: -0.025) and `high` (default: 0.025). Both bounds are configurable using the `noise` input argument.
+    a noise drawn from an uniform distribution.
+    - The lower and upper bound of the distribution is configurable using the input argument `noise` (see section "Arguments").
 
 
     ## Rewards
 
     At every step where the agent's position (p_x, p_y) is not within the `goal_threshold` (see section "Episode End" below), it receives:
 
-    - a negative reward of -1.0, if no puddles
-    - -1 + (-2) * (N(p_x, .3, .1) * N(p_y, .6, .03) + N(p_x, .4, .03) * N(p_y, .5, .1) + N(p_x, .8, .03) * N(p_y, .9, .1)) (if puddles exist)
+    * -1.0 (if no puddles)
+    * -1 + (-2) * (N(p_x, .3, .1) * N(p_y, .6, .03) + N(p_x, .4, .03) * N(p_y, .5, .1) + N(p_x, .8, .03) * N(p_y, .9, .1)) (if puddles exist)
 
     **Note**:
 
-    - N(., mu, rho) = is a 1-D normal distribution with mean mu and variance rho
-    - By default there are three puddles. Each puddle defines a 1-D normal distribution with mean = center of puddle and variance = width of puddle:
-        - puddle 1: center=[0.3, 0.6], width=[0.1, 0.03].
+    - `N(., mu, rho)` = is a one-dimensional normal distribution with mean `mu` and variance `rho`.
+    - By default there are three puddles. Each puddle defines a 1-D normal distribution with mean = puddle-center and variance = puddle-width:
+        - puddle 1: center=[0.3, 0.6], width=[0.1, 0.03]
         - puddle 2: center=[0.4, 0.5], width=[0.03, 0.1]
         - puddle 3: center=[0.8, 0.9], width=[0.03, 0.1]
+    - The number of puddles is also configurable (see input argument `puddles` in the section "Arguments").
 
 
     ## Starting State
 
-    The starting state is defined by the `start` input argument (default: np.array([0.2, 0.4])).
+    The starting state is [0.2, 0.4] (it is configurable by the input argument `start`).
 
 
     ## Episode End
 
-    The episode ends if:
+    The episode ends with:
 
-    - Termination: L1-norm in the difference of the agent's position and the goal position is less than `goal_threshold` (default: 0.1).
+    - Termination: The L1-norm of the difference between the agent's position and the goal position is less than 0.1 (the value is configurable through the input argument `threshold`).
 
     - Truncation: Episode length is greater than e.g., 5000 time-steps. This can be achieved by passing an integer value to the `max_episode_steps=5000` input argument during env init:
 
@@ -91,19 +93,20 @@ class PuddleEnv(gym.Env):
     ```
 
     Note that Gymnasium environments are by default wrapped with `TimeLimit` (https://gymnasium.farama.org/main/api/wrappers/misc_wrappers/#gymnasium.wrappers.TimeLimit),
-    so it suffices to provide a non-None value to `max_episode_steps`. No additional wrapping with `TimeLimit` is necessary.
+    so it suffices to provide a non-None value to `max_episode_steps`. No additional `TimeLimit` wrapping is necessary.
 
 
     ## Arguments
 
-    - `start`: `ndarray` of 2-D start position of agent (default: [0.2, 0.4]).
-    - `goal`: `ndarray` of 2-D goal position (default: [0., 1.]).
-    - `goal_threshold`: (float) threshold for the L1-norm of the difference between agent position and `goal` (default: 0.1).
-    - noise: (float) noise defining the lower and higher bound of the uniform distribution that adds noise to the next observation (default: 0.025).
-    - thrust: (float) the amout of movement in each of the four directions (default: 0.05).
+    - `start`: (np.ndarray) Array with 2-D start position of agent (default: [0.2, 0.4]).
+    - `goal`: (np.ndarray) Array with 2-D goal position (default: [0., 1.]).
+    - `goal_threshold`: (float) Threshold for the L1-norm of the difference between agent position and `goal` (default: 0.1).
+    - `noise`: (float) Defines the lower and higher bound of the uniform distribution that adds noise to the next observation (default: 0.025).
+    - `thrust`: (float) Amout of movement in each of the four directions (default: 0.05).
     - `puddles`: (list[Puddle]) List of puddles. When None, the three default puddles are initialized (see section "Reward" above).
     - `render_mode`: (str) Render modes supported are "human" and "rgb_array".
-    - `max_episode_steps`: (int) Number of timesteps after which to truncate the current episode (Caller should reset the environment afterwards).
+    - `max_episode_steps`: (int) Number of timesteps after which to truncate the current episode (caller should reset the environment immediately afterwards).
+
     """
 
     metadata: dict[str, Any] = {
