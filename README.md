@@ -54,7 +54,7 @@ def main() -> None:
 **Notes**:
 
 - In the above example, the agent-environment interaction is rendered visually on a canvas (since we've set the `render_mode=human`). To disable it, remove the input argument.
-- To truncate the episode beyond a number of time steps (even before having reached the goal state), pass `max_episode_steps` to the input arguments of `make()`. Note that the caller needs to reset the environment immediately after truncation or termination (see example above).
+- To truncate the episodes after a number of time steps have elapsed, pass `max_episode_steps` to the input arguments of `make()`. Note that the caller needs to reset the environment immediately after truncation or termination (see example above).
 - Rendering is fast, but disabling it will make the code even faster and is highly recommended to do for training agents.
 
 ## References
