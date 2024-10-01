@@ -311,12 +311,12 @@ class PuddleEnv(gym.Env):
     ) -> tuple[np.ndarray, dict[str, Any]]:
         super().reset(seed=seed)
 
-        self.pos = self._get_initial_obs()
+        pos = self._get_initial_obs()
 
         if self.render_mode == "human":
             self.render()
 
-        return self.pos, {}
+        return pos, {}
 
     def close(self) -> None:
         if self.viewer is not None:
