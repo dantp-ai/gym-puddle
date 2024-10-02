@@ -98,8 +98,8 @@ class PuddleEnv(gym.Env):
 
     ## Arguments
 
-    - `start`: (np.ndarray) Array with 2-D start position of agent (default: [0.2, 0.4]).
-    - `goal`: (np.ndarray) Array with 2-D goal position (default: [0., 1.]).
+    - `start`: (list) List with 2-D start position of agent (default: [0.2, 0.4]).
+    - `goal`: (list) List with 2-D goal position (default: [1., 1.]).
     - `goal_threshold`: (float) Threshold for the L1-norm of the difference between agent position and `goal` (default: 0.1).
     - `noise`: (float) Defines the lower and higher bound of the uniform distribution that adds noise to the next observation (default: 0.025).
     - `thrust`: (float) Amout of movement in each of the four directions (default: 0.05).
@@ -119,8 +119,8 @@ class PuddleEnv(gym.Env):
 
     def __init__(
         self,
-        start: np.ndarray | None = None,
-        goal: np.ndarray | None = None,
+        start: list[float] | None = [0.2, 0.4],  # noqa: B006
+        goal: list[float] = [1.0, 1.0],  # noqa: B006
         goal_threshold: float = 0.1,
         noise: float = 0.025,
         thrust: float = 0.05,
@@ -140,10 +140,8 @@ class PuddleEnv(gym.Env):
         self.action_space = spaces.Discrete(5)
         self.observation_space = spaces.Box(0.0, 1.0, shape=(2,))
 
-        self.start = (
-            start if start is not None else np.array([0.2, 0.4], dtype=np.float32)
-        )
-        self.goal = goal if goal is not None else np.array([1.0, 1.0], dtype=np.float32)
+        self.start = np.array(start, dtype=np.float32) if start is not None else None
+        self.goal = np.array(goal, dtype=np.float32)
 
         if not self.observation_space.contains(
             self.start
