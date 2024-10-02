@@ -37,10 +37,11 @@ def test_invalid_action() -> None:
 
 
 def test_initial_position_after_reset() -> None:
-    start = np.array([0.4, 0.5], dtype=np.float32)
+    start = [0.4, 0.5]
+    start_arr = np.array(start, dtype=np.float32)
     env = gym.make("PuddleWorld-v0", start=start)
     initial_obs, _ = env.reset()
 
-    assert np.array_equal(initial_obs, start)
+    assert np.array_equal(initial_obs, start_arr)
 
     env.close()
