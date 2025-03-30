@@ -7,11 +7,74 @@ from gymnasium import spaces
 from pygame import Surface as pygSurface
 from pygame.time import Clock as pygClock
 
+try:
+    import numba
+
+    HAS_NUMBA = True
+except ImportError:
+    HAS_NUMBA = False
+
 
 @dataclass
 class Puddle:
     center: np.ndarray
     width: np.ndarray
+
+
+if HAS_NUMBA:
+
+    @numba.jit(nopython=True)
+    def _compute_reward_numba(
+        pos: np.ndarray, puddle_centers: np.ndarray, puddle_widths: np.ndarray
+    ) -> float:
+        reward = -1.0
+        for i in range(len(puddle_centers)):
+            # Extract center and width values directly
+            center_x = puddle_centers[i][0]
+            center_y = puddle_centers[i][1]
+            width_x = puddle_widths[i][0]
+            width_y = puddle_widths[i][1]
+
+            reward -= (
+                2.0
+                * np.exp(-((pos[0] - center_x) ** 2) / (2.0 * width_x**2))
+                / (width_x * np.sqrt(2.0 * np.pi))
+                * np.exp(-((pos[1] - center_y) ** 2) / (2.0 * width_y**2))
+                / (width_y * np.sqrt(2.0 * np.pi))
+            )
+        return reward
+
+    @numba.jit(nopython=True)
+    def _draw_image_numba(
+        img_width: int,
+        img_height: int,
+        n_channels: int,
+        puddle_centers: np.ndarray,
+        puddle_widths: np.ndarray,
+    ) -> np.ndarray:
+        pixels = np.zeros((img_height, img_width, n_channels))
+
+        # Create x and y arrays manually instead of using linspace
+        x = np.zeros(img_width)
+        y = np.zeros(img_height)
+        for i in range(img_width):
+            x[i] = i / img_width
+        for i in range(img_height):
+            y[i] = i / img_height
+
+        # Compute rewards for each pixel
+        for i in range(img_height):
+            for j in range(img_width):
+                pos = np.array([x[j], y[i]])
+                reward = _compute_reward_numba(pos, puddle_centers, puddle_widths)
+                pixels[i, j] = reward
+
+        pixels -= pixels.min()
+        if pixels.max() == 0:  # should occur only when no puddles
+            return np.ones_like(pixels) * 255.0
+
+        pixels *= 255.0 / pixels.max()
+        return np.floor(pixels)
 
 
 class PuddleEnv(gym.Env):
@@ -216,6 +279,26 @@ class PuddleEnv(gym.Env):
         return np.exp(-((p - mu) ** 2) / (2.0 * sig**2)) / (sig * np.sqrt(2.0 * np.pi))
 
     def _draw_image(
+        self,
+        img_width: int = 100,
+        img_height: int = 100,
+        n_channels: int = 3,
+    ) -> np.ndarray:
+        if HAS_NUMBA:
+            # Convert puddles to arrays for Numba
+            if not self.puddles:
+                # Handle empty puddles case
+                puddle_centers = np.zeros((0, 2), dtype=np.float64)
+                puddle_widths = np.zeros((0, 2), dtype=np.float64)
+            else:
+                puddle_centers = np.array([p.center for p in self.puddles])
+                puddle_widths = np.array([p.width for p in self.puddles])
+            return _draw_image_numba(
+                img_width, img_height, n_channels, puddle_centers, puddle_widths
+            )
+        return self._draw_image_numpy(img_width, img_height, n_channels)
+
+    def _draw_image_numpy(
         self,
         img_width: int = 100,
         img_height: int = 100,
