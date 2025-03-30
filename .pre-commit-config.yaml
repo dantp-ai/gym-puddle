@@ -13,17 +13,17 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: uv run mypy tests gym_puddle examples
+        entry: uv run --active mypy tests gym_puddle examples
         pass_filenames: false
         language: system
         types: [python]
       - id: ruff-check
         name: ruff check
-        entry: uv run ruff check --fix
+        entry: uv run --active ruff check --fix
         language: system
         types: [python]
       - id: ruff-format
         name: ruff format
-        entry: uv run ruff format
+        entry: uv run --active ruff format
         language: system
         types: [python]
