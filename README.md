@@ -57,6 +57,29 @@ def main() -> None:
 - To truncate the episodes after a number of time steps have elapsed, pass `max_episode_steps` to the input arguments of `make()`. Note that the caller needs to reset the environment immediately after truncation or termination (see example above).
 - Rendering is fast, but disabling it will make the code even faster and is highly recommended to do for training agents.
 
+## Off-policy actor-critic example
+
+`examples/1_off_pac_discrete_sac.py` trains and evaluates a Discrete-SAC agent on `PuddleWorld-v0`, comparing it against a uniform-random baseline. Discrete SAC is a modern off-policy actor-critic for discrete action spaces; this is not a faithful reproduction of the 2012 Off-PAC algorithm (linear features + tile coding + GTD(λ)) — see [issue #35](https://github.com/dantp-ai/gym-puddle/issues/35) for the rationale.
+
+The example uses [torchRL](https://github.com/pytorch/rl), available in the `rl-examples` optional extra:
+
+```shell
+uv sync --extra rl-examples
+source .venv/bin/activate
+python examples/1_off_pac_discrete_sac.py
+```
+
+A full run takes a few minutes on a laptop CPU and prints a comparison table:
+
+```
+| policy         | mean_return | mean_length | success_rate |
+| -------------- | ----------- | ----------- | ------------ |
+| random         |    -3149.92 |      477.98 |      12.00% |
+| discrete-sac   |     -500.00 |      500.00 |       0.00% |
+```
+
+With the default hyperparameters Discrete SAC learns a clean *puddle-avoidance* policy (returning −1 per step, no puddle penalty) within the training budget. Learning to also reach the goal reliably is left as a follow-up that needs more frames and/or different exploration; see the out-of-scope list in issue #35.
+
 ## References
 - https://github.com/EhsanEI/gym-puddle
 

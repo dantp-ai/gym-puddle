@@ -60,3 +60,32 @@ def test_random_start_position_after_two_consecutive_episodes() -> None:
 
     assert np.array_equal(o1, o2)
     assert np.array_equal(o12, o22)
+
+
+def test_reset_restores_internal_position_between_episodes() -> None:
+    """reset() must reset the internal position, not just the returned obs.
+
+    Regression test: a prior version of reset() computed the initial obs but
+    never assigned it to self.pos, so subsequent step() calls operated on the
+    last position of the previous episode.
+    """
+    env = gym.make("PuddleWorld-v0")  # default start=[0.2, 0.4]
+    env.reset(seed=0)
+
+    # Walk east until we land somewhere far from the start.
+    for _ in range(20):
+        env.step(np.int64(1))  # east
+
+    # New episode: first step from a fresh reset should move ~thrust away from
+    # the start, NOT continue from where the previous episode ended.
+    env.reset(seed=0)
+    obs_after_step, *_ = env.step(np.int64(1))  # east
+    env.close()
+
+    start = np.array([0.2, 0.4], dtype=np.float32)
+    distance = float(np.linalg.norm(obs_after_step - start, ord=1))
+    assert distance < 0.2, (
+        f"step after reset is too far from start: pos={obs_after_step}, "
+        f"start={start}, L1 distance={distance}. reset() likely failed to "
+        f"clear the previous episode's self.pos."
+    )
