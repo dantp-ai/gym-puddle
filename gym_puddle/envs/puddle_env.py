@@ -393,6 +393,7 @@ class PuddleEnv(gym.Env):
         super().reset(seed=seed)
 
         pos = self._get_initial_obs()
+        self.pos = pos
 
         if self.render_mode == "human":
             self.render()
