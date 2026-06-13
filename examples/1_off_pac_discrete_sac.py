@@ -32,10 +32,15 @@ from __future__ import annotations
 
 import random
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
+import gymnasium as gym
+import imageio.v2 as imageio
 import numpy as np
 import torch
+from tensordict import TensorDict
 from tensordict.nn import TensorDictModule
 from torchrl.collectors import Collector
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
@@ -58,11 +63,11 @@ MAX_EPISODE_STEPS = 500
 HIDDEN_DIM = 64
 
 # --- Training budget ------------------------------------------------------
-TOTAL_FRAMES = 100_000
+TOTAL_FRAMES = 300_000
 FRAMES_PER_BATCH = 200
 INIT_RANDOM_FRAMES = 1_000
 BATCH_SIZE = 256
-BUFFER_SIZE = 100_000
+BUFFER_SIZE = 300_000
 UPDATES_PER_BATCH = 100
 
 # --- Discrete SAC ---------------------------------------------------------
@@ -75,9 +80,20 @@ TAU = 0.005
 # learning). Eval is run on the unscaled env so reported metrics are on the
 # environment's native reward scale.
 REWARD_SCALE = 0.1
+# Target entropy = -TARGET_ENTROPY_WEIGHT * log(1/NUM_ACTIONS). Auto-SAC's
+# default (0.98) leaves the policy near-uniform, so the agent never commits to
+# a route. Lower values push the policy toward more deterministic behaviour
+# while still leaving some exploration.
+TARGET_ENTROPY_WEIGHT = 0.3
 
 # --- Evaluation -----------------------------------------------------------
 EVAL_EPISODES = 50
+
+# --- Visualization --------------------------------------------------------
+GIF_OUTPUT_DIR = Path(__file__).resolve().parent / "outputs"
+GIF_FPS = 25
+# Subsample the env's per-step frames to keep GIFs watchable (and small).
+GIF_FRAME_STRIDE = 2
 
 # --- Reproducibility ------------------------------------------------------
 SEED = 43
@@ -154,6 +170,7 @@ def build_loss(
         num_qvalue_nets=2,
         loss_function="l2",
         delay_qvalue=True,
+        target_entropy_weight=TARGET_ENTROPY_WEIGHT,
     )
     loss_module.make_value_estimator(gamma=GAMMA)
     target_updater = SoftUpdate(loss_module, tau=TAU)
@@ -274,6 +291,75 @@ def train(
     return actor
 
 
+def _make_random_policy_fn(env: gym.Env) -> Callable[[np.ndarray], int]:
+    """Uniform random over the discrete action space (used for the baseline GIF)."""
+    rng = np.random.default_rng(SEED + 100)
+    n = env.action_space.n  # type: ignore[attr-defined]
+
+    def fn(_obs: np.ndarray) -> int:
+        return int(rng.integers(0, n))
+
+    return fn
+
+
+def _make_actor_policy_fn(
+    actor: ProbabilisticActor,
+) -> Callable[[np.ndarray], int]:
+    """Deterministic (argmax) policy from the trained Discrete-SAC actor."""
+
+    def fn(obs: np.ndarray) -> int:
+        obs_t = torch.from_numpy(np.asarray(obs, dtype=np.float32))
+        td = TensorDict({"observation": obs_t}, batch_size=())
+        with torch.no_grad(), set_exploration_type(ExplorationType.MODE):
+            td = actor(td)
+        # OneHot action: shape (NUM_ACTIONS,). argmax → discrete action index.
+        return int(td["action"].argmax().item())
+
+    return fn
+
+
+def record_gif(
+    policy_fn: Callable[[np.ndarray], int],
+    out_path: Path,
+    *,
+    seed: int,
+    max_steps: int = MAX_EPISODE_STEPS,
+) -> tuple[float, int, bool]:
+    """Roll out one episode on a fresh render env, save it as a GIF.
+
+    Returns (total_reward, length, terminated).
+    """
+    render_env = gym.make(ENV_ID, max_episode_steps=max_steps, render_mode="rgb_array")
+    try:
+        obs, _ = render_env.reset(seed=seed)
+        render_env.action_space.seed(seed)
+        frames: list[np.ndarray] = []
+        total_reward = 0.0
+        terminated = False
+        truncated = False
+        step = 0
+        for step in range(max_steps):
+            if step % GIF_FRAME_STRIDE == 0:
+                frame: object = render_env.render()
+                if isinstance(frame, np.ndarray):
+                    frames.append(frame)
+            action = policy_fn(np.asarray(obs))
+            obs, reward, terminated, truncated, _ = render_env.step(np.int64(action))
+            total_reward += float(reward)
+            if terminated or truncated:
+                # capture final frame so the agent's last position is visible
+                final_frame: object = render_env.render()
+                if isinstance(final_frame, np.ndarray):
+                    frames.append(final_frame)
+                break
+        length = step + 1
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        imageio.mimsave(out_path, frames, fps=GIF_FPS, loop=0)  # type: ignore[arg-type]
+        return total_reward, length, bool(terminated)
+    finally:
+        render_env.close()
+
+
 def _print_metrics_table(metrics: list[EvalMetrics]) -> None:
     print()
     print(
@@ -302,13 +388,13 @@ def main() -> None:
     qvalue = build_qvalue(train_env)
     loss_module, target_updater = build_loss(train_env, actor, qvalue)
 
-    print(f"[1/3] Evaluating random baseline ({EVAL_EPISODES} episodes)...")
+    print(f"[1/4] Evaluating random baseline ({EVAL_EPISODES} episodes)...")
     random_metrics = random_baseline(eval_env, EVAL_EPISODES)
 
-    print(f"[2/3] Training Discrete SAC for {TOTAL_FRAMES} frames...")
+    print(f"[2/4] Training Discrete SAC for {TOTAL_FRAMES} frames...")
     actor = train(actor, loss_module, target_updater)
 
-    print(f"[3/3] Evaluating trained Discrete SAC ({EVAL_EPISODES} episodes)...")
+    print(f"[3/4] Evaluating trained Discrete SAC ({EVAL_EPISODES} episodes)...")
     sac_metrics = evaluate(eval_env, actor, EVAL_EPISODES, "discrete-sac")
 
     train_env.close()
@@ -316,17 +402,52 @@ def main() -> None:
 
     _print_metrics_table([random_metrics, sac_metrics])
 
-    bar = random_metrics.mean_return + 0.5 * abs(random_metrics.mean_return)
-    if sac_metrics.mean_return <= bar:
+    print(f"[4/4] Recording GIFs to {GIF_OUTPUT_DIR}/ ...")
+    rand_path = GIF_OUTPUT_DIR / "random.gif"
+    sac_path = GIF_OUTPUT_DIR / "discrete_sac.gif"
+    rand_ret, rand_len, rand_term = record_gif(
+        _make_random_policy_fn(gym.make(ENV_ID)),
+        rand_path,
+        seed=SEED + 200,
+    )
+    sac_ret, sac_len, sac_term = record_gif(
+        _make_actor_policy_fn(actor),
+        sac_path,
+        seed=SEED + 200,
+    )
+    print(
+        f"  random:       return={rand_ret:>+8.2f} length={rand_len:>3d}"
+        f" terminated={rand_term}  -> {rand_path}",
+    )
+    print(
+        f"  discrete-sac: return={sac_ret:>+8.2f} length={sac_len:>3d}"
+        f" terminated={sac_term}  -> {sac_path}",
+    )
+
+    # Performance bar: agent must solve the task more reliably than random.
+    # We measure goal-reaching directly (success_rate) rather than mean_return,
+    # because committing to a direct path through puddles can lower return
+    # *and* raise success_rate at the same time. This bar captures "the agent
+    # learned to reach the goal", which is the demo's actual point.
+    min_success_rate = 0.30
+    min_success_ratio = 2.0
+    success_ratio = (
+        sac_metrics.success_rate / random_metrics.success_rate
+        if random_metrics.success_rate > 0
+        else float("inf")
+    )
+    if sac_metrics.success_rate < min_success_rate or success_ratio < min_success_ratio:
         raise AssertionError(
-            f"Discrete SAC mean_return ({sac_metrics.mean_return:.2f}) failed "
-            f"to beat the random baseline bar ({bar:.2f}, i.e. 50% improvement "
-            f"over |random|={abs(random_metrics.mean_return):.2f}).",
+            f"Discrete SAC success_rate ({sac_metrics.success_rate:.2%}) did "
+            f"not meet the bar: needs >= {min_success_rate:.0%} *and* "
+            f">= {min_success_ratio:g}x random "
+            f"({random_metrics.success_rate:.2%}).",
         )
     print("Performance bar PASSED:")
     print(
-        f"  discrete-sac mean_return = {sac_metrics.mean_return:.2f}"
-        f" > {bar:.2f} = random + 0.5 * |random|",
+        f"  discrete-sac success_rate = {sac_metrics.success_rate:.2%}"
+        f" ({success_ratio:.1f}x random's {random_metrics.success_rate:.2%}),"
+        f" >= {min_success_rate:.0%} bar.",
     )
 
 

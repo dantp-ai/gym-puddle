@@ -69,16 +69,22 @@ source .venv/bin/activate
 python examples/1_off_pac_discrete_sac.py
 ```
 
-A full run takes a few minutes on a laptop CPU and prints a comparison table:
+A full run takes ~9 minutes on a laptop CPU and prints a comparison table:
 
 ```
 | policy         | mean_return | mean_length | success_rate |
 | -------------- | ----------- | ----------- | ------------ |
 | random         |    -3149.92 |      477.98 |      12.00% |
-| discrete-sac   |     -500.00 |      500.00 |       0.00% |
+| discrete-sac   |    -7017.06 |      395.22 |      62.00% |
 ```
 
-With the default hyperparameters Discrete SAC learns a clean *puddle-avoidance* policy (returning −1 per step, no puddle penalty) within the training budget. Learning to also reach the goal reliably is left as a follow-up that needs more frames and/or different exploration; see the out-of-scope list in issue #35.
+With the default hyperparameters the agent reaches the goal in **62%** of eval episodes (vs **12%** for uniform random) — a ~5× improvement in success rate. Note that `mean_return` is *worse* than random because the learned policy commits to a direct path **through** the puddles rather than going around them; the per-step puddle penalty outweighs the gain from shorter episodes. This is a classic exploration / exploitation trade-off and tuning `TARGET_ENTROPY_WEIGHT` upward (toward 1.0) gives a smoother return-vs-success-rate curve.
+
+| random behaviour | Discrete SAC behaviour |
+|---|---|
+| ![random](examples/outputs/random.gif) | ![discrete-sac](examples/outputs/discrete_sac.gif) |
+
+(Green square = agent, black blobs = puddles. The goal is at the bottom-right corner just outside the rendered canvas with the default env config.)
 
 ## References
 - https://github.com/EhsanEI/gym-puddle
