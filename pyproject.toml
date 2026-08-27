@@ -25,7 +25,7 @@ dev = [
     "setuptools>=78.1.1",
 ]
 rl-examples = [
-    "torch>=2.2",
+    "torch>=2.13.0",
     "torchrl>=0.6",
     "tensordict>=0.6",
     "imageio>=2.34",
